@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:statefulapp_course/date_time_widget.dart';
+import 'package:uuid/uuid.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,8 +16,35 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: ApiProvider(
+        api: Api(),
+        child: const MyHomePage(title: 'Flutter Demo Home Page'),
+      ),
     );
+  }
+}
+
+class ApiProvider extends InheritedWidget {
+  final Api api;
+  final String uuid;
+
+  ApiProvider({
+    Key? key,
+    required this.api,
+    required Widget child,
+  })  : uuid = const Uuid().v4(),
+        super(
+          key: key,
+          child: child,
+        );
+
+  @override
+  bool updateShouldNotify(covariant ApiProvider oldWidget) {
+    return uuid != oldWidget.uuid;
+  }
+
+  static ApiProvider of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<ApiProvider>()!;
   }
 }
 
@@ -29,24 +58,43 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String title = "Tap the screen";
+  ValueKey _textKey = const ValueKey<String?>(null);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(ApiProvider.of(context).api.dateAndTime ?? ''),
       ),
       body: GestureDetector(
-        onTap: () {
+        onTap: () async {
+          final api = ApiProvider.of(context).api;
+          final dateAndTime = await api.getDateAndTime();
           setState(() {
-            title = DateTime.now().toIso8601String();
+            _textKey = ValueKey(dateAndTime);
           });
         },
         child: Container(
           color: Colors.white,
+          child: DateTimewidget(
+            key: _textKey,
+          ),
         ),
       ),
     );
+  }
+}
+
+class Api {
+  String? dateAndTime;
+
+  Future<String> getDateAndTime() {
+    return Future.delayed(
+      const Duration(seconds: 1),
+      () => DateTime.now().toString(),
+    ).then((value) {
+      dateAndTime = value;
+      return value;
+    });
   }
 }
